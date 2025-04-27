@@ -1,4 +1,5 @@
 import platform
+import sys
 import subprocess, os, shutil
 import wget
 import yt_dlp
@@ -8,6 +9,11 @@ def clear_screen():
         os.system('cls')
     else:
         os.system('clear')
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 def fix_ffmpeg_extracted_path(base_ffmpeg_dir):
     # Step 1: Find the extracted folder
@@ -28,7 +34,7 @@ def fix_ffmpeg_extracted_path(base_ffmpeg_dir):
     print(f"Fixed FFmpeg structure! {extracted_path} removed.")
 
 def extract_7z(archive_path, extract_to):
-    seven_zip_path = os.path.join("7zip", "7za.exe")
+    seven_zip_path = resource_path(os.path.join("7zip", "7za.exe"))
     if not os.path.exists(seven_zip_path):
         raise FileNotFoundError("7z.exe not found!")
     # Create the destination folder if it doesn't exist
@@ -88,13 +94,9 @@ if __name__=="__main__":
     print("Program Initialized Successfully ✅")
     print("Please Enter Video URL:")
     link = input("URL: ")
-    ### DEBUG
-    link="https://youtu.be/WO2b03Zdu4Q"
     print("Your link is: " + link)
     choice = input("\nIs this correct? Yes/No (Y/N) [Default: Yes]: ").strip().lower()
     if choice in ("y", ""):
         download_youtube_video(link)
     elif choice == "n":
         print("Okay, canceling...")
-
-
