@@ -1,6 +1,7 @@
 import platform
 import sys
 import subprocess, os, shutil
+import tarfile
 import wget
 import yt_dlp
 
@@ -33,6 +34,22 @@ def fix_ffmpeg_extracted_path(base_ffmpeg_dir):
     shutil.rmtree(extracted_path)
     print(f"Fixed FFmpeg structure! {extracted_path} removed.")
 
+def fix_linux_ffmpeg_extracted_path(base_ffmpeg_dir):
+    extracted_folders = [f for f in os.listdir(base_ffmpeg_dir) if os.path.isdir(os.path.join(base_ffmpeg_dir, f))]
+    if not extracted_folders:
+        raise Exception("No extracted folders found!")
+    extracted_path = os.path.join(base_ffmpeg_dir, extracted_folders[0])
+    for filename in os.listdir(extracted_path):
+        src = os.path.join(extracted_path, filename)
+        dst = os.path.join(base_ffmpeg_dir, filename)
+        shutil.move(src, dst)
+    for file_name in ("ffmpeg", "ffprobe"):
+        file_path = os.path.join(base_ffmpeg_dir, file_name)
+        if os.path.exists(file_path):
+            os.chmod(file_path, os.stat(file_path).st_mode | 0o111)
+    shutil.rmtree(extracted_path)
+    print(f"Fixed FFmpeg structure! {extracted_path} removed.")
+
 def extract_7z(archive_path, extract_to):
     seven_zip_path = resource_path(os.path.join("7zip", "7za.exe"))
     if not os.path.exists(seven_zip_path):
@@ -47,28 +64,58 @@ def extract_7z(archive_path, extract_to):
         '-y'
     ], check=True)
 
+def extract_tar_xz(archive_path, extract_to):
+    os.makedirs(extract_to, exist_ok=True)
+    with tarfile.open(archive_path, "r:xz") as tar:
+        tar.extractall(path=extract_to)
+
+def get_ffmpeg_required_files():
+    if platform.system() == "Windows":
+        return ["ffmpeg.exe", "ffplay.exe", "ffprobe.exe"]
+    return ["ffmpeg", "ffprobe"]
+
 def ensure_ffmpeg_ready():
-    required_files = [
-        "ffmpeg/ffmpeg.exe",
-        "ffmpeg/ffplay.exe",
-        "ffmpeg/ffprobe.exe"
-    ]
+    required_files = [os.path.join("ffmpeg", file_name) for file_name in get_ffmpeg_required_files()]
     all_exist = all(os.path.exists(file) for file in required_files)
     if all_exist:
         print("FFmpeg is ready to use!          ✅")
         return
     print("FFmpeg not found or incomplete. Setting up FFmpeg...")
-    try:
+    system_name = platform.system()
+    if system_name == "Windows":
         url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-essentials.7z"
-        print(f"Downloading {url}")
-        file_name = wget.download(url)
-        print(f"\nDownloaded {url} to {file_name}")
-    except Exception as e:
-        print(f"Error occurred {e}")
-    file_name = "ffmpeg-git-essentials.7z"
-    extract_7z(file_name, "ffmpeg/")
-    fix_ffmpeg_extracted_path("./ffmpeg/")
-    os.remove(file_name)
+        file_name = "ffmpeg-git-essentials.7z"
+        try:
+            print(f"Downloading {url}")
+            wget.download(url, file_name)
+            print(f"\nDownloaded {url} to {file_name}")
+        except Exception as e:
+            print(f"Error occurred {e}")
+            return
+        extract_7z(file_name, "ffmpeg/")
+        fix_ffmpeg_extracted_path("./ffmpeg/")
+        os.remove(file_name)
+    elif system_name == "Linux":
+        architecture = platform.machine().lower()
+        if architecture in ("x86_64", "amd64"):
+            url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        elif architecture in ("aarch64", "arm64"):
+            url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz"
+        else:
+            raise RuntimeError(f"Unsupported Linux architecture for bundled FFmpeg: {architecture}")
+        file_name = os.path.basename(url)
+        try:
+            print(f"Downloading {url}")
+            wget.download(url, file_name)
+            print(f"\nDownloaded {url} to {file_name}")
+        except Exception as e:
+            print(f"Error occurred {e}")
+            return
+        extract_tar_xz(file_name, "ffmpeg/")
+        fix_linux_ffmpeg_extracted_path("./ffmpeg/")
+        os.remove(file_name)
+    else:
+        raise RuntimeError(f"Unsupported platform for bundled FFmpeg setup: {system_name}")
     print("FFmpeg setup completed!          🎉")
 
 def download_youtube_video(url):
