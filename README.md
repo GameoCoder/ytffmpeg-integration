@@ -3,7 +3,7 @@
 A simple Python application to download YouTube videos easily using `yt-dlp` and `ffmpeg`, with **automatic setup** — no manual downloading needed!
 
 ✨ Features:
-- Automatically downloads and sets up `ffmpeg` (Windows only)
+- Automatically downloads and sets up `ffmpeg` on Windows and Linux
 - Bundled `7-Zip` binary to extract `.7z` files (no installation needed)
 - Uses `yt-dlp` for downloading videos
 - Easy-to-use standalone executable built with PyInstaller
@@ -16,9 +16,9 @@ A simple Python application to download YouTube videos easily using `yt-dlp` and
 
 1. On first run, the app checks if `ffmpeg` is available.
 2. If not, it:
-   - Downloads `ffmpeg` archive from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)
-   - Extracts it automatically using bundled `7za.exe`
-   - Fixes the folder structure
+   - On Windows: downloads from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) and extracts with bundled `7za.exe`
+   - On Linux: downloads static builds from [johnvansickle.com](https://johnvansickle.com/ffmpeg/)
+   - Fixes the folder structure automatically
 3. You simply paste the YouTube link and download!
 
 ---
@@ -37,3 +37,5 @@ Install dependencies:
 pip install pyinstaller wget yt-dlp
 pyinstaller --onefile --add-data "7zip;7zip" __init__.py
 ```
+
+> For Linux builds, the bundled `7zip` files are not required for runtime setup.
